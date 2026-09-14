@@ -1,0 +1,1319 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MotoFin — Controle financeiro do motorista</title>
+<meta name="theme-color" content="#14171C">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="MotoFin">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script src="https://unpkg.com/lucide@latest"></script>
+
+<style>
+  :root{
+    --bg:#14171C;
+    --surface:#1B2028;
+    --surface-2:#232A34;
+    --border:#2C333D;
+    --text:#E8EAED;
+    --text-muted:#8B92A0;
+    --accent:#F2B705;
+    --accent-ink:#14171C;
+    --profit:#2BB673;
+    --expense:#E5484D;
+    --cat-combustivel:#E5484D;
+    --cat-manutencao:#F2994A;
+    --cat-alimentacao:#5B8DEF;
+    --cat-outros:#8B92A0;
+  }
+  html[data-theme="light"]{
+    --bg:#F3F4F1;
+    --surface:#FFFFFF;
+    --surface-2:#EBEDE8;
+    --border:#DCDFDA;
+    --text:#161A1F;
+    --text-muted:#616A78;
+    --accent:#C98D00;
+    --accent-ink:#FFFFFF;
+    --profit:#1D9A5E;
+    --expense:#D93A3F;
+  }
+  :root{
+    --shadow-sm:0 1px 2px rgba(0,0,0,.16);
+    --shadow-md:0 8px 24px -8px rgba(0,0,0,.35);
+    --shadow-lg:0 16px 40px -12px rgba(0,0,0,.45);
+    --ease:cubic-bezier(.4,0,.2,1);
+  }
+  html[data-theme="light"]{
+    --shadow-sm:0 1px 2px rgba(20,23,28,.06);
+    --shadow-md:0 8px 24px -10px rgba(20,23,28,.14);
+    --shadow-lg:0 16px 32px -12px rgba(20,23,28,.16);
+  }
+  *{-webkit-tap-highlight-color:transparent;box-sizing:border-box;}
+  html,body{background:var(--bg);color:var(--text);}
+  html{scroll-behavior:smooth;}
+  body{font-family:'Inter',sans-serif;transition:background-color .25s var(--ease),color .25s var(--ease);}
+  .font-display{font-family:'Space Grotesk',sans-serif;letter-spacing:-.01em;}
+  .tabular-nums{font-variant-numeric:tabular-nums;}
+
+  :focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:8px;}
+
+  input[type="date"]{color-scheme:dark;}
+  html[data-theme="light"] input[type="date"]{color-scheme:light;}
+  input[type=number]::-webkit-inner-spin-button,
+  input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0;}
+  input[type=number]{-moz-appearance:textfield;}
+
+  .field-input::placeholder{color:var(--text-muted);opacity:.55;}
+
+  .card{
+    background:var(--surface);
+    border:1px solid var(--border);
+    box-shadow:var(--shadow-sm);
+    transition:border-color .2s var(--ease),box-shadow .2s var(--ease);
+  }
+
+  .field-card{position:relative;overflow:hidden;padding-left:16px;}
+  .field-card::before{
+    content:"";position:absolute;left:0;top:0;bottom:0;width:3px;
+    background:var(--accent-bar,var(--border));
+  }
+  .field-card.is-ganho::before{background:var(--profit);}
+  .field-card.is-gasto::before{background:var(--expense);}
+
+  .icon-badge{
+    width:30px;height:30px;border-radius:9px;
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+  }
+
+  .chip{
+    display:inline-flex;align-items:center;justify-content:center;
+    height:36px;padding:0 14px;border-radius:999px;
+    background:var(--surface-2);border:1px solid var(--border);
+    font-size:12px;font-weight:600;color:var(--text);
+    transition:transform .12s var(--ease),background-color .15s var(--ease),color .15s var(--ease),border-color .15s var(--ease);
+  }
+  .chip:active{transform:scale(.92);}
+  .chip-clear{color:var(--text-muted);}
+
+  .tap{transition:transform .12s var(--ease),background-color .15s var(--ease),opacity .15s var(--ease);}
+  .tap:active{transform:scale(.94);}
+
+  .nav-btn{color:var(--text-muted);transition:color .2s var(--ease);}
+  .nav-btn.active{color:var(--accent);}
+  .nav-btn.active i{stroke:var(--accent);}
+
+  .view-panel{animation:viewIn .28s var(--ease);}
+  @keyframes viewIn{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
+  @media (prefers-reduced-motion:reduce){
+    .view-panel{animation:none;}
+    html{scroll-behavior:auto;}
+  }
+
+  #print-container{display:none;}
+  @media print{
+    #app{display:none !important;}
+    #print-container{display:block !important; color:#111; background:#fff; padding:24px;}
+  }
+
+  ::-webkit-scrollbar{width:6px;height:6px;}
+  ::-webkit-scrollbar-thumb{background:var(--border);border-radius:99px;}
+</style>
+</head>
+<body class="antialiased">
+
+<div id="app" class="max-w-md mx-auto min-h-screen flex flex-col relative pb-28">
+
+  <!-- Cabeçalho -->
+  <header class="sticky top-0 z-30 px-4 pt-4 pb-3 flex items-center justify-between border-b" style="background:color-mix(in srgb, var(--bg) 88%, transparent);backdrop-filter:blur(10px);border-color:var(--border);">
+    <div class="flex items-center gap-2.5">
+      <div class="w-9 h-9 rounded-xl flex items-center justify-center" style="background:var(--accent);box-shadow:var(--shadow-sm);">
+        <i data-lucide="gauge-circle" class="w-5 h-5" style="color:var(--accent-ink);"></i>
+      </div>
+      <div class="leading-tight">
+        <h1 class="font-display font-bold text-[17px]">MotoFin</h1>
+        <p class="text-[11px]" style="color:var(--text-muted);">Controle do motorista</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-2">
+      <button id="btn-theme" aria-label="Alternar tema" class="tap w-10 h-10 rounded-full flex items-center justify-center" style="background:var(--surface-2);">
+        <i data-lucide="moon" class="w-[18px] h-[18px]"></i>
+      </button>
+      <button id="btn-menu" aria-label="Mais opções" class="tap w-10 h-10 rounded-full flex items-center justify-center" style="background:var(--surface-2);">
+        <i data-lucide="more-vertical" class="w-[18px] h-[18px]"></i>
+      </button>
+    </div>
+  </header>
+
+  <main class="flex-1 px-4 pt-4">
+
+    <!-- ============ DASHBOARD ============ -->
+    <section id="view-dashboard">
+      <div id="install-banner" class="hidden flex rounded-2xl p-3.5 mb-3 items-center gap-3" style="background:var(--surface);border:1px solid var(--border);box-shadow:var(--shadow-sm);">
+        <div class="icon-badge shrink-0" style="width:40px;height:40px;border-radius:12px;background:color-mix(in srgb, var(--accent) 18%, transparent);">
+          <i data-lucide="smartphone" class="w-5 h-5" style="color:var(--accent);"></i>
+        </div>
+        <div class="flex-1 min-w-0">
+          <p class="text-sm font-semibold">Instale o MotoFin</p>
+          <p class="text-xs" id="install-banner-desc" style="color:var(--text-muted);">Acesse como um app, direto da tela inicial.</p>
+        </div>
+        <button id="btn-install-now" class="tap h-9 px-3 rounded-lg text-xs font-semibold shrink-0" style="background:var(--accent);color:var(--accent-ink);">Instalar</button>
+        <button id="btn-install-dismiss" aria-label="Dispensar" class="tap w-8 h-8 rounded-full flex items-center justify-center shrink-0" style="background:var(--surface-2);"><i data-lucide="x" class="w-3.5 h-3.5"></i></button>
+      </div>
+
+      <div class="flex items-center justify-between mb-3">
+        <p id="dash-date-label" class="text-sm" style="color:var(--text-muted);">—</p>
+      </div>
+
+      <div class="relative rounded-[22px] p-5 mb-3 overflow-hidden" style="background:linear-gradient(155deg,var(--surface),var(--surface-2));border:1px solid var(--border);box-shadow:var(--shadow-md);">
+        <div class="absolute -top-10 -right-10 w-36 h-36 rounded-full pointer-events-none" style="background:radial-gradient(circle, color-mix(in srgb, var(--accent) 22%, transparent), transparent 70%);"></div>
+        <p class="relative text-sm mb-1" style="color:var(--text-muted);">Lucro líquido do mês</p>
+        <h2 id="kpi-lucro-mes" class="relative font-display font-bold text-[34px] tabular-nums leading-none">R$ 0,00</h2>
+        <div class="relative flex items-center flex-wrap gap-2 mt-3 text-sm">
+          <span style="color:var(--text-muted);">Hoje: <b id="kpi-lucro-hoje" class="tabular-nums" style="color:var(--text);">R$ 0,00</b></span>
+          <span id="kpi-delta" class="hidden text-xs font-semibold px-2 py-1 rounded-full"></span>
+        </div>
+        <button id="btn-cta-lancar" class="tap hidden relative mt-4 w-full h-12 rounded-xl font-semibold text-sm items-center justify-center gap-2" style="background:var(--accent);color:var(--accent-ink);box-shadow:var(--shadow-sm);">
+          <i data-lucide="plus-circle" class="w-4 h-4"></i> Lançar corridas de hoje
+        </button>
+      </div>
+
+      <div class="card rounded-2xl p-4 mb-3">
+        <div class="flex items-center justify-between mb-3">
+          <p class="text-sm font-semibold flex items-center gap-1.5"><i data-lucide="target" class="w-4 h-4" style="color:var(--accent);"></i>Meta do dia</p>
+          <button id="btn-edit-goal" class="tap text-xs font-medium flex items-center gap-1" style="color:var(--text-muted);"><i data-lucide="pencil" class="w-3.5 h-3.5"></i>Editar</button>
+        </div>
+        <div id="goal-edit-row" class="hidden flex items-center gap-2 mb-3">
+          <span class="text-sm" style="color:var(--text-muted);">R$</span>
+          <input type="number" inputmode="decimal" step="1" min="0" id="goal-input" placeholder="250" class="field-input flex-1 bg-transparent text-lg font-display font-semibold tabular-nums focus:outline-none" style="border-bottom:1px solid var(--border);padding-bottom:2px;">
+          <button id="btn-save-goal" class="tap h-9 px-3 rounded-lg text-xs font-semibold shrink-0" style="background:var(--accent);color:var(--accent-ink);">Salvar</button>
+        </div>
+        <div class="flex items-end justify-between mb-2">
+          <span id="goal-current" class="font-display font-bold text-2xl tabular-nums">R$ 0,00</span>
+          <span id="goal-target" class="text-xs" style="color:var(--text-muted);">meta: R$ 0,00</span>
+        </div>
+        <div class="h-3 rounded-full overflow-hidden" style="background:var(--surface-2);">
+          <div id="goal-bar" class="h-full rounded-full" style="width:0%;background:var(--accent);transition:width .4s var(--ease);"></div>
+        </div>
+        <p id="goal-message" class="text-xs mt-2" style="color:var(--text-muted);">—</p>
+      </div>
+
+      <div class="card rounded-2xl p-4 mb-3 flex items-center gap-3">
+        <div class="icon-badge shrink-0" style="width:36px;height:36px;border-radius:11px;background:color-mix(in srgb, var(--expense) 15%, transparent);"><i data-lucide="repeat" class="w-4 h-4" style="color:var(--expense);"></i></div>
+        <div class="flex-1 min-w-0">
+          <p class="text-sm font-medium">Custos fixos do mês</p>
+          <p class="text-xs" id="recurring-summary" style="color:var(--text-muted);">Nenhum gasto fixo cadastrado.</p>
+        </div>
+        <button id="btn-open-recurring" class="tap h-9 px-3 rounded-lg text-xs font-semibold shrink-0" style="background:var(--surface-2);">Gerenciar</button>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3 mb-4">
+        <div class="card rounded-2xl p-4">
+          <div class="icon-badge mb-2" style="background:color-mix(in srgb, var(--profit) 15%, transparent);"><i data-lucide="banknote" class="w-4 h-4" style="color:var(--profit);"></i></div>
+          <p class="text-xs mb-1" style="color:var(--text-muted);">Faturamento bruto</p>
+          <p id="kpi-bruto" class="font-display font-bold text-xl tabular-nums">R$ 0,00</p>
+        </div>
+        <div class="card rounded-2xl p-4">
+          <div class="icon-badge mb-2" style="background:color-mix(in srgb, var(--accent) 18%, transparent);"><i data-lucide="route" class="w-4 h-4" style="color:var(--accent);"></i></div>
+          <p class="text-xs mb-1" style="color:var(--text-muted);">KM rodada</p>
+          <p id="kpi-km" class="font-display font-bold text-xl tabular-nums">0 km</p>
+        </div>
+        <div class="card rounded-2xl p-4">
+          <div class="icon-badge mb-2" style="background:color-mix(in srgb, var(--expense) 15%, transparent);"><i data-lucide="fuel" class="w-4 h-4" style="color:var(--expense);"></i></div>
+          <p class="text-xs mb-1" style="color:var(--text-muted);">Custo por km</p>
+          <p id="kpi-custokm" class="font-display font-bold text-xl tabular-nums">R$ 0,00</p>
+        </div>
+        <div class="card rounded-2xl p-4">
+          <div class="icon-badge mb-2" style="background:color-mix(in srgb, var(--text-muted) 18%, transparent);"><i data-lucide="clock" class="w-4 h-4" style="color:var(--text-muted);"></i></div>
+          <p class="text-xs mb-1" style="color:var(--text-muted);">Ganho por hora</p>
+          <p id="kpi-ganhohora" class="font-display font-bold text-xl tabular-nums">R$ 0,00</p>
+        </div>
+      </div>
+
+      <div id="fuel-alert" class="hidden flex card rounded-2xl p-4 mb-4 items-center gap-3" style="border-color:color-mix(in srgb, var(--expense) 40%, var(--border));">
+        <div class="icon-badge shrink-0" style="width:40px;height:40px;border-radius:12px;background:color-mix(in srgb, var(--expense) 18%, transparent);">
+          <i data-lucide="triangle-alert" class="w-5 h-5" style="color:var(--expense);"></i>
+        </div>
+        <div class="flex-1 min-w-0">
+          <p class="text-sm font-semibold">Atenção ao combustível</p>
+          <p class="text-xs" id="fuel-alert-text" style="color:var(--text-muted);"></p>
+        </div>
+      </div>
+
+      <div class="card rounded-2xl p-4 mb-3">
+        <p class="text-sm font-semibold mb-3">Evolução diária — lucro líquido</p>
+        <div class="h-40"><canvas id="chart-line"></canvas></div>
+      </div>
+
+      <div class="card rounded-2xl p-4 mb-4">
+        <p class="text-sm font-semibold mb-3">Despesas por categoria</p>
+        <div class="h-40 flex items-center justify-center"><canvas id="chart-doughnut"></canvas></div>
+        <div id="doughnut-legend" class="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 text-xs"></div>
+      </div>
+    </section>
+
+    <!-- ============ LANÇAR ============ -->
+    <section id="view-lancar" class="hidden">
+      <div class="flex items-center gap-2 mb-3">
+        <input type="date" id="entry-date" class="flex-1 h-12 rounded-xl px-3 text-sm font-medium" style="background:var(--surface-2);border:1px solid var(--border);color:var(--text);">
+      </div>
+
+      <button id="btn-copy-yesterday" type="button" class="tap w-full h-11 rounded-xl text-sm font-medium flex items-center justify-center gap-2 mb-4" style="background:var(--surface-2);border:1px dashed var(--border);color:var(--text-muted);">
+        <i data-lucide="copy" class="w-4 h-4"></i>Copiar dados do dia anterior
+      </button>
+
+      <div id="live-summary" class="sticky top-[68px] z-20 rounded-2xl p-4 pl-[18px] mb-4 relative overflow-hidden" style="background:var(--surface);border:1px solid var(--border);box-shadow:var(--shadow-md);">
+        <div class="absolute left-0 top-0 bottom-0 w-1" id="live-summary-bar" style="background:var(--profit);"></div>
+        <p class="text-xs" style="color:var(--text-muted);">Lucro líquido previsto</p>
+        <h3 id="live-liquido" class="font-display font-bold text-3xl tabular-nums leading-tight">R$ 0,00</h3>
+        <p class="text-xs mt-1" id="live-breakdown" style="color:var(--text-muted);">Bruto R$ 0,00 · Gastos R$ 0,00</p>
+      </div>
+
+      <div class="mb-5">
+        <h4 class="font-semibold text-sm mb-2 flex items-center gap-1.5"><i data-lucide="wallet" class="w-4 h-4" style="color:var(--profit);"></i>Ganhos por plataforma</h4>
+        <div id="ganhos-container" class="space-y-3"></div>
+      </div>
+
+      <div class="mb-5">
+        <h4 class="font-semibold text-sm mb-2 flex items-center gap-1.5"><i data-lucide="route" class="w-4 h-4" style="color:var(--text-muted);"></i>Hodômetro / KM rodada</h4>
+        <div class="grid grid-cols-2 gap-3">
+          <div class="card rounded-xl p-3">
+            <label class="text-xs" style="color:var(--text-muted);" for="km-inicial">KM inicial</label>
+            <input id="km-inicial" type="number" inputmode="numeric" step="1" min="0" placeholder="0" class="field-input calc-input w-full bg-transparent text-2xl font-display font-semibold tabular-nums focus:outline-none mt-1">
+          </div>
+          <div class="card rounded-xl p-3">
+            <label class="text-xs" style="color:var(--text-muted);" for="km-final">KM final</label>
+            <input id="km-final" type="number" inputmode="numeric" step="1" min="0" placeholder="0" class="field-input calc-input w-full bg-transparent text-2xl font-display font-semibold tabular-nums focus:outline-none mt-1">
+          </div>
+        </div>
+        <p class="text-xs mt-2 flex items-center gap-1.5" id="km-total-label" style="color:var(--text-muted);"><i data-lucide="milestone" class="w-3.5 h-3.5"></i>0 km rodados hoje</p>
+      </div>
+
+      <div class="mb-5">
+        <h4 class="font-semibold text-sm mb-2 flex items-center gap-1.5"><i data-lucide="clock" class="w-4 h-4" style="color:var(--text-muted);"></i>Horas trabalhadas</h4>
+        <div class="card rounded-xl p-3">
+          <div class="flex items-center gap-2">
+            <input id="horas" type="number" inputmode="decimal" step="0.1" min="0" placeholder="0" class="field-input calc-input w-full bg-transparent text-2xl font-display font-semibold tabular-nums focus:outline-none">
+            <span class="text-sm" style="color:var(--text-muted);">horas</span>
+          </div>
+          <div class="flex gap-2 mt-2 flex-wrap">
+            <button type="button" class="chip" data-target="horas" data-add="1">+1h</button>
+            <button type="button" class="chip" data-target="horas" data-add="2">+2h</button>
+            <button type="button" class="chip" data-target="horas" data-add="4">+4h</button>
+            <button type="button" class="chip" data-target="horas" data-add="8">+8h</button>
+            <button type="button" class="chip chip-clear" data-target="horas" data-clear="1">limpar</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="mb-4">
+        <h4 class="font-semibold text-sm mb-2 flex items-center gap-1.5"><i data-lucide="receipt" class="w-4 h-4" style="color:var(--expense);"></i>Gastos do dia</h4>
+        <div id="gastos-container" class="space-y-3"></div>
+      </div>
+
+      <div id="delete-entry-wrap" class="hidden text-center mb-2">
+        <button id="btn-delete-entry" class="tap text-sm font-medium h-11 px-4" style="color:var(--expense);">Excluir lançamento deste dia</button>
+      </div>
+
+      <button id="btn-save-entry" class="tap w-full h-14 rounded-2xl font-bold text-base flex items-center justify-center gap-2 mb-3" style="background:var(--accent);color:var(--accent-ink);box-shadow:var(--shadow-md);">
+        <i data-lucide="check" class="w-5 h-5"></i><span id="btn-save-label">Salvar lançamento</span>
+      </button>
+    </section>
+
+    <!-- ============ RELATÓRIOS ============ -->
+    <section id="view-relatorios" class="hidden">
+      <div class="flex gap-2 overflow-x-auto pb-1 mb-3" style="scrollbar-width:none;">
+        <button data-period="hoje" class="period-btn chip whitespace-nowrap">Hoje</button>
+        <button data-period="semana" class="period-btn chip whitespace-nowrap">Esta semana</button>
+        <button data-period="mes" class="period-btn chip whitespace-nowrap">Este mês</button>
+        <button data-period="tudo" class="period-btn chip whitespace-nowrap">Tudo</button>
+        <button data-period="custom" class="period-btn chip whitespace-nowrap">Período</button>
+      </div>
+
+      <div id="custom-range" class="hidden grid grid-cols-2 gap-2 mb-3">
+        <input type="date" id="range-start" class="h-11 rounded-xl px-3 text-sm" style="background:var(--surface-2);border:1px solid var(--border);color:var(--text);">
+        <input type="date" id="range-end" class="h-11 rounded-xl px-3 text-sm" style="background:var(--surface-2);border:1px solid var(--border);color:var(--text);">
+      </div>
+
+      <div class="flex gap-2 overflow-x-auto pb-1 mb-4" style="scrollbar-width:none;">
+        <button data-platform="todos" class="platform-btn chip whitespace-nowrap">Todos os apps</button>
+        <button data-platform="uber" class="platform-btn chip whitespace-nowrap">Uber</button>
+        <button data-platform="noventaenove" class="platform-btn chip whitespace-nowrap">99</button>
+        <button data-platform="indrive" class="platform-btn chip whitespace-nowrap">inDrive</button>
+        <button data-platform="particular" class="platform-btn chip whitespace-nowrap">Particular</button>
+        <button data-platform="outros" class="platform-btn chip whitespace-nowrap">Outros</button>
+      </div>
+
+      <div class="grid grid-cols-3 gap-2 mb-4">
+        <div class="card rounded-xl p-3 text-center">
+          <p class="text-[11px]" style="color:var(--text-muted);">Bruto</p>
+          <p id="rep-bruto" class="font-display font-bold text-sm tabular-nums mt-0.5">R$ 0</p>
+        </div>
+        <div class="card rounded-xl p-3 text-center">
+          <p class="text-[11px]" style="color:var(--text-muted);">Gastos</p>
+          <p id="rep-gastos" class="font-display font-bold text-sm tabular-nums mt-0.5">R$ 0</p>
+        </div>
+        <div class="card rounded-xl p-3 text-center">
+          <p class="text-[11px]" style="color:var(--text-muted);">Líquido</p>
+          <p id="rep-liquido" class="font-display font-bold text-sm tabular-nums mt-0.5">R$ 0</p>
+        </div>
+      </div>
+
+      <div class="card rounded-2xl p-4 mb-4">
+        <p class="text-sm font-semibold mb-3">Retorno por aplicativo</p>
+        <div id="rep-ranking" class="space-y-3"></div>
+        <p id="rep-ranking-empty" class="text-xs hidden flex items-center gap-1.5" style="color:var(--text-muted);"><i data-lucide="inbox" class="w-3.5 h-3.5"></i>Nenhum ganho lançado neste período.</p>
+      </div>
+
+      <div id="platform-insight" class="hidden card rounded-2xl p-4 mb-4">
+        <p class="text-sm font-semibold mb-3 flex items-center gap-1.5"><i data-lucide="calendar-days" class="w-4 h-4" style="color:var(--accent);"></i><span id="platform-insight-title">Por dia da semana</span></p>
+        <div id="platform-insight-bars" class="space-y-2 mb-2"></div>
+        <p id="platform-insight-tip" class="text-xs" style="color:var(--text-muted);"></p>
+      </div>
+
+      <div class="flex gap-2 mb-4">
+        <button id="btn-export-csv" class="tap flex-1 h-12 rounded-xl text-sm font-semibold flex items-center justify-center gap-2" style="background:var(--surface-2);border:1px solid var(--border);">
+          <i data-lucide="file-down" class="w-4 h-4"></i>Exportar CSV
+        </button>
+        <button id="btn-export-print" class="tap flex-1 h-12 rounded-xl text-sm font-semibold flex items-center justify-center gap-2" style="background:var(--surface-2);border:1px solid var(--border);">
+          <i data-lucide="printer" class="w-4 h-4"></i>Imprimir / PDF
+        </button>
+      </div>
+
+      <p class="text-sm font-semibold mb-2">Lançamentos</p>
+      <div id="rep-list" class="space-y-2"></div>
+      <div id="rep-list-empty" class="hidden text-sm text-center py-10 flex flex-col items-center gap-2" style="color:var(--text-muted);">
+        <i data-lucide="calendar-x" class="w-6 h-6"></i>Nenhum lançamento neste período.
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Navegação inferior -->
+  <nav class="fixed bottom-0 inset-x-0 z-40 px-4" style="padding-bottom:calc(env(safe-area-inset-bottom) + 12px);">
+    <div class="max-w-md mx-auto relative flex items-stretch h-16 rounded-[24px]" style="background:color-mix(in srgb, var(--surface) 92%, transparent);backdrop-filter:blur(12px);border:1px solid var(--border);box-shadow:var(--shadow-lg);">
+      <button data-view="dashboard" class="nav-btn tap flex-1 flex flex-col items-center justify-center gap-1 rounded-[24px]">
+        <i data-lucide="layout-dashboard" class="w-5 h-5"></i><span class="text-[11px] font-medium">Início</span>
+      </button>
+      <div class="flex-1 flex items-start justify-center">
+        <button data-view="lancar" aria-label="Lançar dia" class="tap absolute -top-6 w-14 h-14 rounded-full flex items-center justify-center" style="background:var(--accent);color:var(--accent-ink);box-shadow:0 10px 22px -6px color-mix(in srgb, var(--accent) 55%, transparent);">
+          <i data-lucide="plus" class="w-7 h-7"></i>
+        </button>
+      </div>
+      <button data-view="relatorios" class="nav-btn tap flex-1 flex flex-col items-center justify-center gap-1 rounded-[24px]">
+        <i data-lucide="bar-chart-3" class="w-5 h-5"></i><span class="text-[11px] font-medium">Relatórios</span>
+      </button>
+    </div>
+  </nav>
+</div>
+
+<!-- Menu de opções -->
+<div id="modal-menu" class="hidden fixed inset-0 z-50 items-end justify-center" style="background:rgba(0,0,0,.5);">
+  <div class="w-full max-w-md rounded-t-3xl p-4" style="background:var(--surface);box-shadow:var(--shadow-lg);padding-bottom:calc(env(safe-area-inset-bottom) + 16px);">
+    <div class="w-10 h-1.5 rounded-full mx-auto mb-4" style="background:var(--border);"></div>
+    <button id="btn-menu-install" class="tap w-full h-12 rounded-xl flex items-center gap-3 px-4 mb-2 text-sm font-medium" style="background:var(--surface-2);">
+      <span class="icon-badge" style="background:color-mix(in srgb, var(--accent) 18%, transparent);"><i data-lucide="smartphone" class="w-4 h-4" style="color:var(--accent);"></i></span>Instalar como app
+    </button>
+    <button id="btn-menu-recurring" class="tap w-full h-12 rounded-xl flex items-center gap-3 px-4 mb-2 text-sm font-medium" style="background:var(--surface-2);">
+      <span class="icon-badge" style="background:color-mix(in srgb, var(--expense) 18%, transparent);"><i data-lucide="repeat" class="w-4 h-4" style="color:var(--expense);"></i></span>Gastos fixos / recorrentes
+    </button>
+    <button id="btn-backup-export" class="tap w-full h-12 rounded-xl flex items-center gap-3 px-4 mb-2 text-sm font-medium" style="background:var(--surface-2);">
+      <span class="icon-badge" style="background:color-mix(in srgb, var(--accent) 18%, transparent);"><i data-lucide="download" class="w-4 h-4" style="color:var(--accent);"></i></span>Exportar backup (JSON)
+    </button>
+    <label class="tap w-full h-12 rounded-xl flex items-center gap-3 px-4 mb-2 text-sm font-medium cursor-pointer" style="background:var(--surface-2);">
+      <span class="icon-badge" style="background:color-mix(in srgb, var(--profit) 18%, transparent);"><i data-lucide="upload" class="w-4 h-4" style="color:var(--profit);"></i></span>Importar backup
+      <input id="btn-backup-import" type="file" accept="application/json" class="hidden">
+    </label>
+    <button id="btn-wipe-data" class="tap w-full h-12 rounded-xl flex items-center gap-3 px-4 mb-2 text-sm font-medium" style="background:var(--surface-2);color:var(--expense);">
+      <span class="icon-badge" style="background:color-mix(in srgb, var(--expense) 18%, transparent);"><i data-lucide="trash-2" class="w-4 h-4" style="color:var(--expense);"></i></span>Limpar todos os dados
+    </button>
+    <button id="btn-menu-close" class="tap w-full h-12 rounded-xl text-sm font-semibold mt-1" style="background:var(--surface-2);">Fechar</button>
+  </div>
+</div>
+
+<!-- Gastos fixos / recorrentes -->
+<div id="modal-recurring" class="hidden fixed inset-0 z-50 items-end justify-center" style="background:rgba(0,0,0,.5);">
+  <div class="w-full max-w-md rounded-t-3xl p-4 overflow-y-auto" style="background:var(--surface);box-shadow:var(--shadow-lg);max-height:85vh;padding-bottom:calc(env(safe-area-inset-bottom) + 16px);">
+    <div class="w-10 h-1.5 rounded-full mx-auto mb-4" style="background:var(--border);"></div>
+    <p class="text-sm font-semibold mb-3 flex items-center gap-1.5"><i data-lucide="repeat" class="w-4 h-4" style="color:var(--expense);"></i>Gastos fixos / recorrentes</p>
+
+    <div id="recurring-list" class="space-y-2 mb-3"></div>
+    <p id="recurring-list-empty" class="hidden text-xs mb-3" style="color:var(--text-muted);">Nenhum gasto fixo cadastrado ainda.</p>
+
+    <div class="card rounded-xl p-3 mb-3">
+      <label class="text-xs" style="color:var(--text-muted);" for="recurring-label">Descrição</label>
+      <input type="text" id="recurring-label" placeholder="Ex: Aluguel do carro" class="field-input w-full bg-transparent text-base font-medium focus:outline-none mt-0.5 mb-3 pb-1" style="border-bottom:1px solid var(--border);">
+      <div class="grid grid-cols-2 gap-3 mb-3">
+        <div>
+          <label class="text-xs" style="color:var(--text-muted);" for="recurring-amount">Valor (R$)</label>
+          <input type="number" inputmode="decimal" step="0.01" min="0" id="recurring-amount" placeholder="0,00" class="field-input w-full bg-transparent text-lg font-display font-semibold tabular-nums focus:outline-none mt-0.5 pb-1" style="border-bottom:1px solid var(--border);">
+        </div>
+        <div>
+          <label class="text-xs mb-1 block" style="color:var(--text-muted);">Frequência</label>
+          <div class="flex gap-1">
+            <button type="button" class="freq-btn chip flex-1 !px-2" data-freq="diaria">Diária</button>
+            <button type="button" class="freq-btn chip flex-1 !px-2" data-freq="semanal">Semanal</button>
+            <button type="button" class="freq-btn chip flex-1 !px-2" data-freq="mensal">Mensal</button>
+          </div>
+        </div>
+      </div>
+      <button id="btn-add-recurring" class="tap w-full h-11 rounded-xl text-sm font-semibold flex items-center justify-center gap-2" style="background:var(--accent);color:var(--accent-ink);">
+        <i data-lucide="plus" class="w-4 h-4"></i>Adicionar gasto fixo
+      </button>
+    </div>
+    <p class="text-[11px] mb-3" style="color:var(--text-muted);">Esses valores entram automaticamente no lucro líquido e no ganho por hora do mês, sem precisar lançar todo dia.</p>
+    <button id="btn-recurring-close" class="tap w-full h-12 rounded-xl text-sm font-semibold" style="background:var(--surface-2);">Fechar</button>
+  </div>
+</div>
+
+<div id="toast" class="hidden fixed left-1/2 -translate-x-1/2 z-50 px-4 py-3 rounded-xl text-sm font-medium" style="bottom:100px;background:var(--text);color:var(--bg);box-shadow:var(--shadow-lg);"></div>
+
+<div id="print-container"></div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------- Persistência ---------- */
+  const STORAGE_KEY = "motofin_entries_v1";
+  const THEME_KEY = "motofin_theme";
+  const GOAL_KEY = "motofin_daily_goal";
+  const RECURRING_KEY = "motofin_recurring_v1";
+  let entriesMap = {};
+  try{ entriesMap = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}"); }catch(e){ entriesMap = {}; }
+  let recurring = [];
+  try{ recurring = JSON.parse(localStorage.getItem(RECURRING_KEY) || "[]"); }catch(e){ recurring = []; }
+
+  function persist(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(entriesMap)); }
+  function persistRecurring(){ localStorage.setItem(RECURRING_KEY, JSON.stringify(recurring)); }
+  function allEntries(){ return Object.values(entriesMap).sort((a,b)=> a.date < b.date ? 1 : -1); }
+  function getGoal(){ const v = parseFloat(localStorage.getItem(GOAL_KEY)); return isNaN(v) || v <= 0 ? 250 : v; }
+  function setGoal(v){ localStorage.setItem(GOAL_KEY, v); }
+
+  /* ---------- Config de campos ---------- */
+  const GANHOS_CONFIG = [
+    {key:"uber", label:"Uber", icon:"car-front", chips:[10,20,50]},
+    {key:"noventaenove", label:"99", icon:"car", chips:[10,20,50]},
+    {key:"indrive", label:"inDrive", icon:"navigation", chips:[10,20,50]},
+    {key:"particular", label:"Particular", icon:"user", chips:[20,50,100]},
+    {key:"outros", label:"Outros ganhos", icon:"circle-plus", chips:[10,20,50]}
+  ];
+  const GASTOS_CONFIG = [
+    {key:"combustivel", label:"Combustível", icon:"fuel", chips:[20,50,100]},
+    {key:"manutencao", label:"Manutenção", icon:"wrench", chips:[50,100,200]},
+    {key:"alimentacao", label:"Alimentação", icon:"utensils", chips:[10,20,30]},
+    {key:"outros", label:"Outros gastos", icon:"more-horizontal", chips:[10,20,50]}
+  ];
+  const PLATFORM_LABELS = {uber:"Uber", noventaenove:"99", indrive:"inDrive", particular:"Particular", outros:"Outros"};
+
+  function fieldRowHTML(cfg, group){
+    const id = group + "-" + cfg.key;
+    const isGanho = group === "ganhos";
+    const tint = isGanho ? "var(--profit)" : "var(--expense)";
+    const chipsHTML = cfg.chips.map(c => `<button type="button" class="chip" data-target="${id}" data-add="${c}">+${c}</button>`).join("");
+    const fuelCalcHTML = cfg.key === "combustivel" && group === "gastos" ? `
+        <div class="mt-3 pt-3" style="border-top:1px dashed var(--border);">
+          <button type="button" id="fuel-toggle-calc" class="tap text-xs font-semibold flex items-center gap-1.5" style="color:var(--accent);">
+            <i data-lucide="calculator" class="w-3.5 h-3.5"></i><span id="fuel-toggle-label">Calcular por litros</span>
+          </button>
+          <div id="fuel-calc-panel" class="hidden mt-3 grid grid-cols-2 gap-3">
+            <div>
+              <label class="text-[11px]" style="color:var(--text-muted);" for="fuel-litros">Litros abastecidos</label>
+              <input type="number" inputmode="decimal" step="0.01" min="0" placeholder="0,0" id="fuel-litros" class="field-input w-full bg-transparent text-lg font-display font-semibold tabular-nums focus:outline-none mt-0.5 pb-1" style="border-bottom:1px solid var(--border);">
+            </div>
+            <div>
+              <label class="text-[11px]" style="color:var(--text-muted);" for="fuel-preco-litro">Preço por litro</label>
+              <input type="number" inputmode="decimal" step="0.01" min="0" placeholder="0,00" id="fuel-preco-litro" class="field-input w-full bg-transparent text-lg font-display font-semibold tabular-nums focus:outline-none mt-0.5 pb-1" style="border-bottom:1px solid var(--border);">
+            </div>
+            <p class="col-span-2 text-[11px] flex items-center gap-1.5" id="fuel-calc-result" style="color:var(--text-muted);"><i data-lucide="equal" class="w-3 h-3"></i>R$ 0,00 preenchido automaticamente acima</p>
+          </div>
+        </div>` : "";
+    return `
+      <div class="card field-card ${isGanho ? "is-ganho" : "is-gasto"} rounded-xl p-3 pr-3">
+        <label class="text-sm font-medium flex items-center gap-2 mb-2" for="${id}">
+          <span class="icon-badge" style="background:color-mix(in srgb, ${tint} 15%, transparent);"><i data-lucide="${cfg.icon}" class="w-4 h-4" style="color:${tint};"></i></span>${cfg.label}
+        </label>
+        <div class="flex items-center gap-2">
+          <span class="text-base font-medium" style="color:var(--text-muted);">R$</span>
+          <input type="number" inputmode="decimal" step="0.01" min="0" placeholder="0,00" id="${id}"
+                 class="field-input calc-input flex-1 bg-transparent text-2xl font-display font-semibold tabular-nums focus:outline-none">
+        </div>
+        <div class="flex gap-2 mt-2 flex-wrap">
+          ${chipsHTML}
+          <button type="button" class="chip chip-clear" data-target="${id}" data-clear="1">limpar</button>
+        </div>
+        ${fuelCalcHTML}
+      </div>`;
+  }
+
+  document.getElementById("ganhos-container").innerHTML = GANHOS_CONFIG.map(c => fieldRowHTML(c, "ganhos")).join("");
+  document.getElementById("gastos-container").innerHTML = GASTOS_CONFIG.map(c => fieldRowHTML(c, "gastos")).join("");
+
+  /* ---------- Combustível: cálculo opcional por litros ---------- */
+  const fuelToggleBtn = document.getElementById("fuel-toggle-calc");
+  const fuelPanel = document.getElementById("fuel-calc-panel");
+  const fuelToggleLabel = document.getElementById("fuel-toggle-label");
+  const fuelLitrosInput = document.getElementById("fuel-litros");
+  const fuelPrecoInput = document.getElementById("fuel-preco-litro");
+  const fuelResultEl = document.getElementById("fuel-calc-result");
+
+  function fuelPanelIsOpen(){ return fuelPanel && !fuelPanel.classList.contains("hidden"); }
+
+  function setFuelPanel(open){
+    if (!fuelPanel) return;
+    fuelPanel.classList.toggle("hidden", !open);
+    fuelToggleLabel.textContent = open ? "Inserir valor manual" : "Calcular por litros";
+  }
+
+  function updateFuelCalc(){
+    if (!fuelPanelIsOpen()) return;
+    const litros = parseFloat(fuelLitrosInput.value) || 0;
+    const preco = parseFloat(fuelPrecoInput.value) || 0;
+    const total = litros * preco;
+    document.getElementById("gastos-combustivel").value = total > 0 ? total.toFixed(2) : "";
+    fuelResultEl.innerHTML = `<i data-lucide="equal" class="w-3 h-3"></i>${fmtBRL(total)} preenchido automaticamente acima`;
+    lucide.createIcons();
+    document.getElementById("gastos-combustivel").dispatchEvent(new Event("input", {bubbles:true}));
+  }
+
+  if (fuelToggleBtn){
+    fuelToggleBtn.addEventListener("click", () => {
+      setFuelPanel(!fuelPanelIsOpen());
+      if (fuelPanelIsOpen()) updateFuelCalc();
+    });
+    [fuelLitrosInput, fuelPrecoInput].forEach(inp => inp.addEventListener("input", updateFuelCalc));
+  }
+
+  /* ---------- Utilidades ---------- */
+  const fmtBRL = v => (v||0).toLocaleString("pt-BR", {style:"currency", currency:"BRL"});
+  const val = id => { const el = document.getElementById(id); const n = parseFloat((el && el.value) || "0"); return isNaN(n) ? 0 : n; };
+  const todayISO = () => { const d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0,10); };
+  const fmtDateLong = iso => { const [y,m,d] = iso.split("-"); return new Date(y,m-1,d).toLocaleDateString("pt-BR", {day:"2-digit", month:"long"}); };
+  const fmtDateShort = iso => { const [y,m,d] = iso.split("-"); return new Date(y,m-1,d).toLocaleDateString("pt-BR", {day:"2-digit", month:"2-digit", year:"numeric"}); };
+  const weekdayShort = iso => { const [y,m,d] = iso.split("-"); return new Date(y,m-1,d).toLocaleDateString("pt-BR", {weekday:"short"}).replace(".", ""); };
+
+  function computeDerived(entry){
+    let bruto = 0;
+    GANHOS_CONFIG.forEach(c => bruto += (entry.ganhos && entry.ganhos[c.key]) || 0);
+    let gastos = 0;
+    GASTOS_CONFIG.forEach(c => gastos += (entry.gastos && entry.gastos[c.key]) || 0);
+    const km = Math.max(0, (entry.kmFinal || 0) - (entry.kmInicial || 0));
+    const horas = entry.horas || 0;
+    const liquido = bruto - gastos;
+    return {bruto, gastos, km, horas, liquido};
+  }
+
+  function showToast(msg){
+    const t = document.getElementById("toast");
+    t.textContent = msg;
+    t.classList.remove("hidden");
+    clearTimeout(showToast._timer);
+    showToast._timer = setTimeout(()=> t.classList.add("hidden"), 2200);
+  }
+
+  /* ---------- Tema ---------- */
+  function applyTheme(theme){
+    document.documentElement.setAttribute("data-theme", theme);
+    localStorage.setItem(THEME_KEY, theme);
+    const icon = document.querySelector("#btn-theme i");
+    icon.setAttribute("data-lucide", theme === "dark" ? "moon" : "sun");
+    lucide.createIcons();
+    if (currentView === "dashboard") renderDashboard();
+  }
+  document.getElementById("btn-theme").addEventListener("click", () => {
+    const cur = document.documentElement.getAttribute("data-theme");
+    applyTheme(cur === "dark" ? "light" : "dark");
+  });
+
+  /* ---------- Navegação ---------- */
+  let currentView = "dashboard";
+  function switchView(name){
+    currentView = name;
+    ["dashboard","lancar","relatorios"].forEach(v => {
+      const el = document.getElementById("view-" + v);
+      el.classList.toggle("hidden", v !== name);
+      if (v === name){ el.classList.remove("view-panel"); void el.offsetWidth; el.classList.add("view-panel"); }
+    });
+    document.querySelectorAll(".nav-btn").forEach(b => b.classList.toggle("active", b.dataset.view === name));
+    if (name === "dashboard") renderDashboard();
+    if (name === "lancar") loadEntryIntoForm(document.getElementById("entry-date").value || todayISO());
+    if (name === "relatorios") renderRelatorios();
+    window.scrollTo({top:0});
+  }
+  document.querySelectorAll("[data-view]").forEach(btn => btn.addEventListener("click", () => switchView(btn.dataset.view)));
+
+  /* ---------- Chips de preenchimento rápido ---------- */
+  document.addEventListener("click", (e) => {
+    const chip = e.target.closest(".chip[data-target]");
+    if (!chip) return;
+    const input = document.getElementById(chip.dataset.target);
+    if (!input) return;
+    if (chip.dataset.clear){
+      input.value = "";
+    } else {
+      const add = parseFloat(chip.dataset.add) || 0;
+      const cur = parseFloat(input.value) || 0;
+      input.value = (cur + add).toString().replace(/\.0+$/, "");
+    }
+    input.dispatchEvent(new Event("input", {bubbles:true}));
+  });
+
+  /* ---------- Formulário de lançamento ---------- */
+  function readFormEntry(){
+    const ganhos = {}; GANHOS_CONFIG.forEach(c => ganhos[c.key] = val("ganhos-" + c.key));
+    const gastos = {}; GASTOS_CONFIG.forEach(c => gastos[c.key] = val("gastos-" + c.key));
+    if (fuelPanelIsOpen()){
+      gastos.combustivelModo = "litros";
+      gastos.combustivelLitros = val("fuel-litros");
+      gastos.combustivelPrecoLitro = val("fuel-preco-litro");
+    } else {
+      gastos.combustivelModo = "valor";
+    }
+    return {
+      date: document.getElementById("entry-date").value,
+      ganhos, gastos,
+      kmInicial: val("km-inicial"),
+      kmFinal: val("km-final"),
+      horas: val("horas")
+    };
+  }
+
+  function loadEntryIntoForm(date){
+    document.getElementById("entry-date").value = date;
+    const existing = entriesMap[date];
+    GANHOS_CONFIG.forEach(c => document.getElementById("ganhos-" + c.key).value = existing ? (existing.ganhos[c.key] || "") : "");
+    GASTOS_CONFIG.forEach(c => document.getElementById("gastos-" + c.key).value = existing ? (existing.gastos[c.key] || "") : "");
+    document.getElementById("km-inicial").value = existing ? (existing.kmInicial || "") : "";
+    document.getElementById("km-final").value = existing ? (existing.kmFinal || "") : "";
+    document.getElementById("horas").value = existing ? (existing.horas || "") : "";
+    const modo = existing && existing.gastos && existing.gastos.combustivelModo;
+    if (modo === "litros"){
+      setFuelPanel(true);
+      fuelLitrosInput.value = existing.gastos.combustivelLitros || "";
+      fuelPrecoInput.value = existing.gastos.combustivelPrecoLitro || "";
+      fuelResultEl.innerHTML = `<i data-lucide="equal" class="w-3 h-3"></i>${fmtBRL(existing.gastos.combustivel || 0)} preenchido automaticamente acima`;
+      lucide.createIcons();
+    } else {
+      setFuelPanel(false);
+      fuelLitrosInput.value = "";
+      fuelPrecoInput.value = "";
+      fuelResultEl.innerHTML = `<i data-lucide="equal" class="w-3 h-3"></i>R$ 0,00 preenchido automaticamente acima`;
+    }
+    document.getElementById("btn-save-label").textContent = existing ? "Atualizar lançamento" : "Salvar lançamento";
+    document.getElementById("delete-entry-wrap").classList.toggle("hidden", !existing);
+    updateLiveSummary();
+  }
+
+  function updateLiveSummary(){
+    const d = computeDerived(readFormEntry());
+    const liq = document.getElementById("live-liquido");
+    liq.textContent = fmtBRL(d.liquido);
+    liq.style.color = d.liquido >= 0 ? "var(--profit)" : "var(--expense)";
+    document.getElementById("live-summary-bar").style.background = d.liquido >= 0 ? "var(--profit)" : "var(--expense)";
+    document.getElementById("live-breakdown").textContent = `Bruto ${fmtBRL(d.bruto)} · Gastos ${fmtBRL(d.gastos)}`;
+
+    const ki = val("km-inicial"), kf = val("km-final");
+    const kmLabel = document.getElementById("km-total-label");
+    if (kf > 0 && kf < ki){
+      kmLabel.textContent = "KM final deve ser maior que o KM inicial";
+      kmLabel.style.color = "var(--expense)";
+    } else {
+      kmLabel.textContent = `${d.km.toLocaleString("pt-BR")} km rodados neste dia`;
+      kmLabel.style.color = "var(--text-muted)";
+    }
+  }
+  document.addEventListener("input", (e) => { if (e.target.classList.contains("calc-input")) updateLiveSummary(); });
+  document.getElementById("entry-date").addEventListener("change", (e) => loadEntryIntoForm(e.target.value));
+
+  const addDaysISO = (iso, delta) => {
+    const [y,m,d] = iso.split("-").map(Number);
+    const dt = new Date(y, m-1, d);
+    dt.setDate(dt.getDate() + delta);
+    return dt.getFullYear() + "-" + String(dt.getMonth()+1).padStart(2,"0") + "-" + String(dt.getDate()).padStart(2,"0");
+  };
+
+  document.getElementById("btn-copy-yesterday").addEventListener("click", () => {
+    const date = document.getElementById("entry-date").value;
+    if (!date){ showToast("Escolha uma data primeiro."); return; }
+    const prevISO = addDaysISO(date, -1);
+    const prevEntry = entriesMap[prevISO];
+    if (!prevEntry){ showToast("Não há lançamento em " + fmtDateShort(prevISO) + "."); return; }
+    if (entriesMap[date] && !confirm("Isso substituirá os dados já preenchidos neste dia. Continuar?")) return;
+
+    GANHOS_CONFIG.forEach(c => document.getElementById("ganhos-" + c.key).value = prevEntry.ganhos[c.key] || "");
+    GASTOS_CONFIG.forEach(c => document.getElementById("gastos-" + c.key).value = prevEntry.gastos[c.key] || "");
+    document.getElementById("horas").value = prevEntry.horas || "";
+    // Continua o hodômetro: KM final de ontem vira KM inicial de hoje.
+    document.getElementById("km-inicial").value = prevEntry.kmFinal || "";
+    document.getElementById("km-final").value = "";
+
+    if (prevEntry.gastos.combustivelModo === "litros"){
+      setFuelPanel(true);
+      fuelLitrosInput.value = prevEntry.gastos.combustivelLitros || "";
+      fuelPrecoInput.value = prevEntry.gastos.combustivelPrecoLitro || "";
+      updateFuelCalc();
+    } else {
+      setFuelPanel(false);
+    }
+
+    updateLiveSummary();
+    showToast("Dados copiados de " + fmtDateShort(prevISO) + ". Confira o KM e salve.");
+  });
+
+  document.getElementById("btn-save-entry").addEventListener("click", () => {
+    const data = readFormEntry();
+    if (!data.date){ showToast("Escolha uma data para o lançamento."); return; }
+    entriesMap[data.date] = data;
+    persist();
+    showToast("Lançamento salvo!");
+    loadEntryIntoForm(data.date);
+  });
+
+  document.getElementById("btn-delete-entry").addEventListener("click", () => {
+    const date = document.getElementById("entry-date").value;
+    if (!entriesMap[date]) return;
+    if (!confirm("Excluir o lançamento de " + fmtDateShort(date) + "?")) return;
+    delete entriesMap[date];
+    persist();
+    showToast("Lançamento excluído.");
+    loadEntryIntoForm(date);
+  });
+
+  /* ---------- Dashboard ---------- */
+  function cssVar(name){ return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+
+  /* ---------- Meta do dia (lucro alvo) ---------- */
+  function renderGoal(liquidoHoje){
+    const goal = getGoal();
+    document.getElementById("goal-input").value = "";
+    document.getElementById("goal-target").textContent = "meta: " + fmtBRL(goal);
+    const currentEl = document.getElementById("goal-current");
+    currentEl.textContent = fmtBRL(liquidoHoje);
+    currentEl.style.color = liquidoHoje >= 0 ? "var(--text)" : "var(--expense)";
+    const pct = goal > 0 ? Math.max(0, Math.min(100, (liquidoHoje / goal) * 100)) : 0;
+    const bar = document.getElementById("goal-bar");
+    bar.style.width = pct + "%";
+    bar.style.background = pct >= 100 ? "var(--profit)" : "var(--accent)";
+    const msg = document.getElementById("goal-message");
+    if (liquidoHoje >= goal){
+      msg.textContent = "Meta batida! Você já lucrou " + fmtBRL(liquidoHoje - goal) + " acima da meta de hoje.";
+      msg.style.color = "var(--profit)";
+    } else {
+      msg.textContent = "Faltam " + fmtBRL(goal - liquidoHoje) + " para bater a meta de hoje.";
+      msg.style.color = "var(--text-muted)";
+    }
+  }
+
+  /* ---------- Gastos fixos / recorrentes ---------- */
+  const FREQ_LABELS = {diaria:"diária", semanal:"semanal", mensal:"mensal"};
+
+  function computeRecurringMonthlyTotal(daysSoFar){
+    let total = 0;
+    recurring.forEach(r => {
+      if (r.frequency === "diaria") total += r.amount * daysSoFar;
+      else if (r.frequency === "semanal") total += r.amount * Math.max(1, Math.ceil(daysSoFar / 7));
+      else total += r.amount;
+    });
+    return total;
+  }
+
+  function renderRecurringSummary(recurringTotal){
+    const el = document.getElementById("recurring-summary");
+    if (!recurring.length){ el.textContent = "Nenhum gasto fixo cadastrado."; return; }
+    el.textContent = fmtBRL(recurringTotal) + " já descontados este mês (" + recurring.length + (recurring.length === 1 ? " item)" : " itens)");
+  }
+
+  function renderRecurringList(){
+    const listEl = document.getElementById("recurring-list");
+    document.getElementById("recurring-list-empty").classList.toggle("hidden", recurring.length > 0);
+    listEl.innerHTML = recurring.map(r => `
+      <div class="card rounded-xl p-3 flex items-center gap-3">
+        <div class="flex-1 min-w-0">
+          <p class="text-sm font-medium truncate">${r.label}</p>
+          <p class="text-xs" style="color:var(--text-muted);">${fmtBRL(r.amount)} · ${FREQ_LABELS[r.frequency]}</p>
+        </div>
+        <button class="recurring-delete tap w-8 h-8 rounded-full flex items-center justify-center shrink-0" data-id="${r.id}" style="background:var(--surface-2);color:var(--expense);"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+      </div>`).join("");
+    lucide.createIcons();
+    document.querySelectorAll(".recurring-delete").forEach(btn => btn.addEventListener("click", () => {
+      recurring = recurring.filter(r => r.id !== btn.dataset.id);
+      persistRecurring();
+      renderRecurringList();
+      renderDashboard();
+    }));
+  }
+
+  /* ---------- Alerta de custo de combustível ---------- */
+  function fuelCostPerKmForRange(startISO, endISO){
+    let gastoFuel = 0, km = 0;
+    allEntries().forEach(e => {
+      if (e.date >= startISO && e.date <= endISO){
+        const d = computeDerived(e);
+        if (d.km > 0){ gastoFuel += (e.gastos.combustivel || 0); km += d.km; }
+      }
+    });
+    return km > 0 ? gastoFuel / km : 0;
+  }
+
+  function renderFuelAlert(){
+    const today = todayISO();
+    const thisWeekStart = addDaysISO(today, -6);
+    const prevWeekEnd = addDaysISO(today, -7);
+    const prevWeekStart = addDaysISO(today, -13);
+    const thisWeekCost = fuelCostPerKmForRange(thisWeekStart, today);
+    const prevWeekCost = fuelCostPerKmForRange(prevWeekStart, prevWeekEnd);
+    const alertEl = document.getElementById("fuel-alert");
+    if (thisWeekCost > 0 && prevWeekCost > 0){
+      const pctChange = ((thisWeekCost - prevWeekCost) / prevWeekCost) * 100;
+      if (pctChange >= 15){
+        document.getElementById("fuel-alert-text").textContent = "Seu custo de combustível por km subiu " + pctChange.toFixed(0) + "% em relação à semana passada (" + fmtBRL(prevWeekCost) + " → " + fmtBRL(thisWeekCost) + " por km).";
+        alertEl.classList.remove("hidden");
+        return;
+      }
+    }
+    alertEl.classList.add("hidden");
+  }
+
+  let lineChart = null, doughnutChart = null;
+  const CAT_COLORS = {combustivel:"var(--cat-combustivel)", manutencao:"var(--cat-manutencao)", alimentacao:"var(--cat-alimentacao)", outros:"var(--cat-outros)"};
+
+  function renderDashboard(){
+    const today = todayISO();
+    const [year, month] = today.split("-").map(Number);
+    const monthPrefix = today.slice(0,7);
+    const daysSoFar = Number(today.slice(8,10));
+    const monthEntries = allEntries().filter(e => e.date.startsWith(monthPrefix));
+
+    document.getElementById("dash-date-label").textContent = "Hoje, " + fmtDateLong(today);
+
+    let bruto=0, gastos=0, liquido=0, km=0, horas=0;
+    monthEntries.forEach(e => { const d = computeDerived(e); bruto+=d.bruto; gastos+=d.gastos; liquido+=d.liquido; km+=d.km; horas+=d.horas; });
+
+    const recurringTotal = computeRecurringMonthlyTotal(daysSoFar);
+    const liquidoAjustado = liquido - recurringTotal;
+
+    document.getElementById("kpi-lucro-mes").textContent = fmtBRL(liquidoAjustado);
+    document.getElementById("kpi-lucro-mes").style.color = liquidoAjustado >= 0 ? "var(--profit)" : "var(--expense)";
+    document.getElementById("kpi-bruto").textContent = fmtBRL(bruto);
+    document.getElementById("kpi-km").textContent = km.toLocaleString("pt-BR") + " km";
+    document.getElementById("kpi-custokm").textContent = km > 0 ? fmtBRL(gastos / km) : "R$ 0,00";
+    document.getElementById("kpi-ganhohora").textContent = horas > 0 ? fmtBRL(liquidoAjustado / horas) : "R$ 0,00";
+
+    const todayEntry = entriesMap[today];
+    const dToday = todayEntry ? computeDerived(todayEntry) : {liquido:0};
+    document.getElementById("kpi-lucro-hoje").textContent = fmtBRL(dToday.liquido);
+    document.getElementById("btn-cta-lancar").classList.toggle("hidden", !!todayEntry);
+    document.getElementById("btn-cta-lancar").classList.toggle("flex", !todayEntry);
+
+    renderGoal(dToday.liquido);
+    renderRecurringSummary(recurringTotal);
+    renderFuelAlert();
+
+    const yesterday = new Date(year, month-1, Number(today.slice(8,10)) - 1).toISOString().slice(0,10);
+    const yEntry = entriesMap[yesterday];
+    const deltaEl = document.getElementById("kpi-delta");
+    if (todayEntry && yEntry){
+      const diff = dToday.liquido - computeDerived(yEntry).liquido;
+      deltaEl.classList.remove("hidden");
+      deltaEl.style.background = diff >= 0 ? "color-mix(in srgb, var(--profit) 18%, transparent)" : "color-mix(in srgb, var(--expense) 18%, transparent)";
+      deltaEl.style.color = diff >= 0 ? "var(--profit)" : "var(--expense)";
+      deltaEl.textContent = (diff >= 0 ? "▲ " : "▼ ") + fmtBRL(Math.abs(diff)) + " vs. ontem";
+    } else {
+      deltaEl.classList.add("hidden");
+    }
+
+    // Gráfico de linha — evolução diária do mês corrente
+    const labels = [], series = [];
+    for (let i=1;i<=daysSoFar;i++){
+      const iso = monthPrefix + "-" + String(i).padStart(2,"0");
+      labels.push(String(i));
+      series.push(entriesMap[iso] ? computeDerived(entriesMap[iso]).liquido : 0);
+    }
+    const accent = cssVar("--accent"), border = cssVar("--border"), muted = cssVar("--text-muted");
+    if (lineChart) lineChart.destroy();
+    lineChart = new Chart(document.getElementById("chart-line"), {
+      type: "line",
+      data: { labels, datasets: [{ data: series, borderColor: accent, backgroundColor: "color-mix(in srgb, " + accent + " 18%, transparent)", borderWidth: 2, pointRadius: 0, tension: .35, fill: true }] },
+      options: {
+        maintainAspectRatio:false, responsive:true,
+        plugins:{legend:{display:false}, tooltip:{callbacks:{label:c=>fmtBRL(c.parsed.y)}}},
+        scales:{
+          x:{grid:{display:false}, ticks:{color:muted, maxTicksLimit:6, font:{size:10}}},
+          y:{grid:{color:border}, ticks:{color:muted, font:{size:10}, callback:v=>"R$ "+v}}
+        }
+      }
+    });
+
+    // Gráfico de rosca — despesas por categoria
+    const catTotals = {combustivel:0, manutencao:0, alimentacao:0, outros:0};
+    monthEntries.forEach(e => GASTOS_CONFIG.forEach(c => catTotals[c.key] += (e.gastos && e.gastos[c.key]) || 0));
+    const catColors = GASTOS_CONFIG.map(c => cssVar(CAT_COLORS[c.key].replace("var(","").replace(")","")));
+    if (doughnutChart) doughnutChart.destroy();
+    const totalGastosMes = Object.values(catTotals).reduce((a,b)=>a+b,0);
+    doughnutChart = new Chart(document.getElementById("chart-doughnut"), {
+      type: "doughnut",
+      data: { labels: GASTOS_CONFIG.map(c=>c.label), datasets:[{ data: GASTOS_CONFIG.map(c=>catTotals[c.key]), backgroundColor: catColors, borderWidth:0 }] },
+      options: { maintainAspectRatio:false, cutout:"68%", plugins:{legend:{display:false}, tooltip:{callbacks:{label:c=>fmtBRL(c.parsed)}}} }
+    });
+    const legendEl = document.getElementById("doughnut-legend");
+    if (totalGastosMes === 0){
+      legendEl.innerHTML = `<p class="col-span-2" style="color:var(--text-muted);">Sem gastos lançados neste mês.</p>`;
+    } else {
+      legendEl.innerHTML = GASTOS_CONFIG.map((c,i) => `
+        <div class="flex items-center gap-1.5">
+          <span class="w-2.5 h-2.5 rounded-full" style="background:${catColors[i]};"></span>
+          <span style="color:var(--text-muted);">${c.label}</span>
+          <span class="ml-auto font-medium tabular-nums">${fmtBRL(catTotals[c.key])}</span>
+        </div>`).join("");
+    }
+    lucide.createIcons();
+  }
+
+  /* ---------- Relatórios ---------- */
+  let currentPeriod = "mes";
+  document.querySelectorAll(".period-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      currentPeriod = btn.dataset.period;
+      document.querySelectorAll(".period-btn").forEach(b => {
+        b.style.background = b === btn ? "var(--accent)" : "var(--surface-2)";
+        b.style.color = b === btn ? "var(--accent-ink)" : "var(--text)";
+      });
+      document.getElementById("custom-range").classList.toggle("hidden", currentPeriod !== "custom");
+      renderRelatorios();
+    });
+  });
+  document.getElementById("range-start").addEventListener("change", renderRelatorios);
+  document.getElementById("range-end").addEventListener("change", renderRelatorios);
+
+  function getFilteredEntries(){
+    const today = todayISO();
+    let start, end = today;
+    if (currentPeriod === "hoje"){ start = today; }
+    else if (currentPeriod === "semana"){ const d = new Date(); d.setDate(d.getDate()-6); start = d.toISOString().slice(0,10); }
+    else if (currentPeriod === "mes"){ start = today.slice(0,7) + "-01"; }
+    else if (currentPeriod === "tudo"){ start = "0000-01-01"; }
+    else { start = document.getElementById("range-start").value || "0000-01-01"; end = document.getElementById("range-end").value || today; }
+    return allEntries().filter(e => e.date >= start && e.date <= end);
+  }
+
+  function renderRelatorios(){
+    const filtered = getFilteredEntries();
+    let bruto=0, gastos=0, liquido=0;
+    const platformTotals = {}; Object.keys(PLATFORM_LABELS).forEach(k => platformTotals[k]=0);
+    filtered.forEach(e => {
+      const d = computeDerived(e);
+      bruto += d.bruto; gastos += d.gastos; liquido += d.liquido;
+      Object.keys(PLATFORM_LABELS).forEach(k => platformTotals[k] += (e.ganhos && e.ganhos[k]) || 0);
+    });
+    document.getElementById("rep-bruto").textContent = fmtBRL(bruto);
+    document.getElementById("rep-gastos").textContent = fmtBRL(gastos);
+    const repLiq = document.getElementById("rep-liquido");
+    repLiq.textContent = fmtBRL(liquido);
+    repLiq.style.color = liquido >= 0 ? "var(--profit)" : "var(--expense)";
+
+    const ranked = Object.entries(platformTotals).sort((a,b)=>b[1]-a[1]);
+    const maxVal = ranked.length ? ranked[0][1] : 0;
+    const rankEl = document.getElementById("rep-ranking");
+    document.getElementById("rep-ranking-empty").classList.toggle("hidden", maxVal > 0);
+    rankEl.innerHTML = maxVal === 0 ? "" : ranked.map(([key,v], idx) => `
+      <div>
+        <div class="flex items-center justify-between text-xs mb-1.5">
+          <span class="font-medium flex items-center gap-1.5">${PLATFORM_LABELS[key]}${idx===0 && v>0 ? '<span class="text-[10px] font-semibold px-1.5 py-0.5 rounded-full" style="background:color-mix(in srgb, var(--accent) 20%, transparent);color:var(--accent);">líder</span>' : ''}</span>
+          <span class="tabular-nums font-medium">${fmtBRL(v)}</span>
+        </div>
+        <div class="h-2 rounded-full overflow-hidden" style="background:var(--surface-2);">
+          <div class="h-full rounded-full" style="width:${maxVal>0 ? (v/maxVal*100) : 0}%;background:${idx===0 ? 'var(--accent)' : 'var(--text-muted)'};transition:width .4s var(--ease);"></div>
+        </div>
+      </div>`).join("");
+
+    const listEl = document.getElementById("rep-list");
+    document.getElementById("rep-list-empty").classList.toggle("hidden", filtered.length > 0);
+    listEl.innerHTML = filtered.map(e => {
+      const d = computeDerived(e);
+      const ganhoHora = d.horas > 0 ? fmtBRL(d.liquido / d.horas) : "—";
+      return `
+      <div class="card rounded-xl p-3 flex items-center gap-3">
+        <div class="w-11 h-11 rounded-lg flex flex-col items-center justify-center shrink-0" style="background:var(--surface-2);">
+          <span class="text-[10px] leading-none" style="color:var(--text-muted);">${weekdayShort(e.date)}</span>
+          <span class="text-sm font-bold leading-tight font-display">${e.date.slice(8,10)}</span>
+        </div>
+        <div class="flex-1 min-w-0">
+          <p class="text-sm font-semibold tabular-nums" style="color:${d.liquido>=0?'var(--profit)':'var(--expense)'};">${fmtBRL(d.liquido)}</p>
+          <p class="text-[11px] truncate" style="color:var(--text-muted);">Bruto ${fmtBRL(d.bruto)} · Gastos ${fmtBRL(d.gastos)} · ${d.km} km</p>
+          <p class="text-[11px] truncate flex items-center gap-1" style="color:var(--text-muted);"><i data-lucide="clock" class="w-3 h-3"></i>${d.horas}h <span class="mx-0.5">·</span><i data-lucide="zap" class="w-3 h-3"></i>${ganhoHora}/h</p>
+        </div>
+        <button class="rep-edit tap w-9 h-9 rounded-full flex items-center justify-center shrink-0" data-date="${e.date}" style="background:var(--surface-2);"><i data-lucide="pencil" class="w-4 h-4"></i></button>
+        <button class="rep-delete tap w-9 h-9 rounded-full flex items-center justify-center shrink-0" data-date="${e.date}" style="background:var(--surface-2);color:var(--expense);"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+      </div>`;
+    }).join("");
+    lucide.createIcons();
+
+    document.querySelectorAll(".rep-edit").forEach(btn => btn.addEventListener("click", () => {
+      const date = btn.dataset.date;
+      switchView("lancar");
+      loadEntryIntoForm(date);
+    }));
+    document.querySelectorAll(".rep-delete").forEach(btn => btn.addEventListener("click", () => {
+      const date = btn.dataset.date;
+      if (!confirm("Excluir o lançamento de " + fmtDateShort(date) + "?")) return;
+      delete entriesMap[date];
+      persist();
+      renderRelatorios();
+      showToast("Lançamento excluído.");
+    }));
+  }
+
+  /* ---------- Exportação CSV ---------- */
+  document.getElementById("btn-export-csv").addEventListener("click", () => {
+    const filtered = getFilteredEntries().slice().sort((a,b)=> a.date < b.date ? -1 : 1);
+    if (!filtered.length){ showToast("Nenhum lançamento para exportar."); return; }
+    const header = ["Data","Uber","99","inDrive","Particular","Outros ganhos","Faturamento bruto","Combustível","Manutenção","Alimentação","Outros gastos","Total gastos","KM inicial","KM final","KM rodada","Horas","Lucro líquido","Ganho por hora"];
+    const numBR = n => (n||0).toFixed(2).replace(".", ",");
+    const rows = filtered.map(e => {
+      const d = computeDerived(e);
+      return [
+        fmtDateShort(e.date),
+        numBR(e.ganhos.uber), numBR(e.ganhos.noventaenove), numBR(e.ganhos.indrive), numBR(e.ganhos.particular), numBR(e.ganhos.outros),
+        numBR(d.bruto),
+        numBR(e.gastos.combustivel), numBR(e.gastos.manutencao), numBR(e.gastos.alimentacao), numBR(e.gastos.outros),
+        numBR(d.gastos),
+        e.kmInicial||0, e.kmFinal||0, d.km, numBR(e.horas),
+        numBR(d.liquido),
+        d.horas > 0 ? numBR(d.liquido / d.horas) : "-"
+      ].join(";");
+    });
+    const csv = "\uFEFF" + [header.join(";"), ...rows].join("\r\n");
+    const blob = new Blob([csv], {type:"text/csv;charset=utf-8;"});
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "motofin_relatorio_" + todayISO() + ".csv";
+    document.body.appendChild(a); a.click(); a.remove();
+  });
+
+  /* ---------- Impressão / PDF ---------- */
+  document.getElementById("btn-export-print").addEventListener("click", () => {
+    const filtered = getFilteredEntries().slice().sort((a,b)=> a.date < b.date ? -1 : 1);
+    let bruto=0, gastos=0, liquido=0;
+    const rows = filtered.map(e => {
+      const d = computeDerived(e);
+      bruto+=d.bruto; gastos+=d.gastos; liquido+=d.liquido;
+      const ganhoHora = d.horas > 0 ? fmtBRL(d.liquido / d.horas) : "-";
+      return `<tr><td>${fmtDateShort(e.date)}</td><td>${fmtBRL(d.bruto)}</td><td>${fmtBRL(d.gastos)}</td><td>${fmtBRL(d.liquido)}</td><td>${d.km} km</td><td>${d.horas}h</td><td>${ganhoHora}</td></tr>`;
+    }).join("");
+    document.getElementById("print-container").innerHTML = `
+      <h1 style="font-size:20px;font-weight:700;margin-bottom:2px;">MotoFin — Relatório financeiro</h1>
+      <p style="font-size:12px;color:#555;margin-bottom:16px;">Período: ${currentPeriod} · Gerado em ${fmtDateShort(todayISO())}</p>
+      <table style="width:100%;border-collapse:collapse;font-size:12px;">
+        <thead><tr style="text-align:left;border-bottom:1px solid #999;">
+          <th style="padding:6px 4px;">Data</th><th style="padding:6px 4px;">Bruto</th><th style="padding:6px 4px;">Gastos</th><th style="padding:6px 4px;">Líquido</th><th style="padding:6px 4px;">KM</th><th style="padding:6px 4px;">Horas</th><th style="padding:6px 4px;">Ganho/h</th>
+        </tr></thead>
+        <tbody>${rows || '<tr><td colspan="7" style="padding:8px 4px;">Nenhum lançamento no período.</td></tr>'}</tbody>
+        <tfoot><tr style="border-top:2px solid #333;font-weight:700;">
+          <td style="padding:6px 4px;">Total</td><td style="padding:6px 4px;">${fmtBRL(bruto)}</td><td style="padding:6px 4px;">${fmtBRL(gastos)}</td><td style="padding:6px 4px;">${fmtBRL(liquido)}</td><td colspan="3"></td>
+        </tr></tfoot>
+      </table>`;
+    window.print();
+  });
+
+  /* ---------- Menu / backup ---------- */
+  const modalMenu = document.getElementById("modal-menu");
+  document.getElementById("btn-menu").addEventListener("click", () => { modalMenu.classList.remove("hidden"); modalMenu.classList.add("flex"); });
+  document.getElementById("btn-menu-close").addEventListener("click", () => { modalMenu.classList.add("hidden"); modalMenu.classList.remove("flex"); });
+  modalMenu.addEventListener("click", (e) => { if (e.target === modalMenu){ modalMenu.classList.add("hidden"); modalMenu.classList.remove("flex"); } });
+
+  document.getElementById("btn-backup-export").addEventListener("click", () => {
+    const blob = new Blob([JSON.stringify(entriesMap, null, 2)], {type:"application/json"});
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "motofin_backup_" + todayISO() + ".json";
+    document.body.appendChild(a); a.click(); a.remove();
+    showToast("Backup exportado.");
+  });
+  document.getElementById("btn-backup-import").addEventListener("change", (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try{
+        const imported = JSON.parse(reader.result);
+        entriesMap = Object.assign({}, entriesMap, imported);
+        persist();
+        showToast("Backup importado.");
+        renderDashboard();
+      }catch(err){ showToast("Arquivo inválido."); }
+    };
+    reader.readAsText(file);
+    e.target.value = "";
+  });
+  document.getElementById("btn-wipe-data").addEventListener("click", () => {
+    if (!confirm("Isso apagará todos os lançamentos salvos neste dispositivo. Deseja continuar?")) return;
+    entriesMap = {};
+    persist();
+    modalMenu.classList.add("hidden"); modalMenu.classList.remove("flex");
+    showToast("Todos os dados foram apagados.");
+    switchView("dashboard");
+  });
+
+  /* ---------- Instalar como app (PWA) ---------- */
+  function generateIconDataURL(size){
+    const c = document.createElement("canvas");
+    c.width = size; c.height = size;
+    const ctx = c.getContext("2d");
+    ctx.fillStyle = "#F2B705";
+    ctx.fillRect(0, 0, size, size);
+    ctx.strokeStyle = "#14171C";
+    ctx.lineWidth = size * 0.07;
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.arc(size/2, size/2, size*0.30, 0, Math.PI*2);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(size/2, size/2);
+    ctx.lineTo(size*0.70, size*0.30);
+    ctx.stroke();
+    ctx.fillStyle = "#14171C";
+    ctx.beginPath();
+    ctx.arc(size/2, size/2, size*0.065, 0, Math.PI*2);
+    ctx.fill();
+    return c.toDataURL("image/png");
+  }
+
+  function setupManifest(){
+    try{
+      const icon192 = generateIconDataURL(192);
+      const icon512 = generateIconDataURL(512);
+      const manifest = {
+        name: "MotoFin — Controle do Motorista",
+        short_name: "MotoFin",
+        description: "Controle financeiro e operacional para motoristas de aplicativo.",
+        start_url: ".",
+        scope: ".",
+        display: "standalone",
+        background_color: "#14171C",
+        theme_color: "#14171C",
+        orientation: "portrait",
+        icons: [
+          {src: icon192, sizes:"192x192", type:"image/png", purpose:"any"},
+          {src: icon512, sizes:"512x512", type:"image/png", purpose:"any"},
+          {src: icon192, sizes:"192x192", type:"image/png", purpose:"maskable"}
+        ]
+      };
+      const blob = new Blob([JSON.stringify(manifest)], {type:"application/manifest+json"});
+      const url = URL.createObjectURL(blob);
+      let link = document.querySelector('link[rel="manifest"]');
+      if (!link){ link = document.createElement("link"); link.rel = "manifest"; document.head.appendChild(link); }
+      link.href = url;
+
+      let appleIcon = document.querySelector('link[rel="apple-touch-icon"]');
+      if (!appleIcon){ appleIcon = document.createElement("link"); appleIcon.rel = "apple-touch-icon"; document.head.appendChild(appleIcon); }
+      appleIcon.href = icon192;
+    }catch(err){ /* geração de manifest é um extra: falhar aqui não deve travar o app */ }
+  }
+
+  function setupServiceWorker(){
+    if (!("serviceWorker" in navigator)) return;
+    try{
+      const swCode = `
+        const CACHE = "motofin-shell-v1";
+        self.addEventListener("install", () => self.skipWaiting());
+        self.addEventListener("activate", (e) => e.waitUntil(self.clients.claim()));
+        self.addEventListener("fetch", (e) => {
+          if (e.request.mode === "navigate"){
+            e.respondWith(
+              fetch(e.request).then((res) => {
+                const copy = res.clone();
+                caches.open(CACHE).then((c) => c.put(e.request, copy));
+                return res;
+              }).catch(() => caches.match(e.request))
+            );
+          }
+        });
+      `;
+      const blob = new Blob([swCode], {type:"application/javascript"});
+      const url = URL.createObjectURL(blob);
+      navigator.serviceWorker.register(url).catch(() => {});
+    }catch(err){ /* offline/registro indisponível (ex.: aberto via file://) — segue sem PWA completo */ }
+  }
+
+  let deferredInstallPrompt = null;
+  const isStandalone = () => window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
+  const isIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent);
+
+  function maybeShowInstallBanner(){
+    if (isStandalone() || localStorage.getItem("motofin_install_dismissed")) return;
+    const banner = document.getElementById("install-banner");
+    const btn = document.getElementById("btn-install-now");
+    if (deferredInstallPrompt){
+      btn.classList.remove("hidden");
+      document.getElementById("install-banner-desc").textContent = "Acesse como um app, direto da tela inicial.";
+      banner.classList.remove("hidden");
+    } else if (isIOS()){
+      btn.classList.add("hidden");
+      document.getElementById("install-banner-desc").textContent = 'No Safari, toque em Compartilhar e depois em "Adicionar à Tela de Início".';
+      banner.classList.remove("hidden");
+    }
+  }
+
+  window.addEventListener("beforeinstallprompt", (e) => {
+    e.preventDefault();
+    deferredInstallPrompt = e;
+    maybeShowInstallBanner();
+  });
+  window.addEventListener("appinstalled", () => {
+    deferredInstallPrompt = null;
+    document.getElementById("install-banner").classList.add("hidden");
+    showToast("MotoFin instalado com sucesso!");
+  });
+
+  document.getElementById("btn-install-now").addEventListener("click", async () => {
+    if (!deferredInstallPrompt) return;
+    deferredInstallPrompt.prompt();
+    await deferredInstallPrompt.userChoice;
+    deferredInstallPrompt = null;
+    document.getElementById("install-banner").classList.add("hidden");
+  });
+  document.getElementById("btn-install-dismiss").addEventListener("click", () => {
+    localStorage.setItem("motofin_install_dismissed", "1");
+    document.getElementById("install-banner").classList.add("hidden");
+  });
+  document.getElementById("btn-menu-install").addEventListener("click", () => {
+    modalMenu.classList.add("hidden"); modalMenu.classList.remove("flex");
+    if (isStandalone()){ showToast("O app já está instalado neste dispositivo."); return; }
+    if (deferredInstallPrompt){
+      deferredInstallPrompt.prompt();
+      deferredInstallPrompt.userChoice.finally(() => { deferredInstallPrompt = null; });
+    } else if (isIOS()){
+      showToast('No Safari: toque em Compartilhar e depois em "Adicionar à Tela de Início".');
+    } else {
+      showToast('Abra pelo Chrome e use o menu ⋮ → "Instalar app" ou "Adicionar à tela inicial".');
+    }
+  });
+
+  /* ---------- Inicialização ---------- */
+  function init(){
+    applyTheme(localStorage.getItem(THEME_KEY) || "dark");
+    document.getElementById("entry-date").value = todayISO();
+    document.querySelectorAll(".period-btn").forEach(b => {
+      if (b.dataset.period === currentPeriod){ b.style.background = "var(--accent)"; b.style.color = "var(--accent-ink)"; }
+    });
+    loadEntryIntoForm(todayISO());
+    renderDashboard();
+    setupManifest();
+    setupServiceWorker();
+    maybeShowInstallBanner();
+    lucide.createIcons();
+  }
+  init();
+})();
+</script>
+</body>
+</html>
